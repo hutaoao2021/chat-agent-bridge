@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Chat Agent Bridge</title>
+<style>body{font:14px system-ui;width:340px;padding:14px;color:#17232b}h1{font-size:18px}label{display:block;margin-top:10px}input{box-sizing:border-box;width:100%;padding:7px;margin:4px 0}button{padding:7px 12px;margin:5px 4px 5px 0}#status{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5f7;padding:10px;border-radius:8px}.approval{border:1px solid #b8c7d0;padding:8px;margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere}#error{color:#a12121}</style></head>
+<body><h1>Chat Agent Bridge</h1><p id="work-mode">此对话启用一次后会记住工作模式。发送状态不明时暂停。</p>
+<label>本地控制服务<input id="base" value="http://127.0.0.1:8900"></label>
+<label>一次性配对码<input id="code" type="password" autocomplete="off"></label>
+<button id="pair">配对</button><button id="revoke">解除配对</button>
+<p id="pairing-detail">首次配对一次即可；已连接时配对码留空正常。</p>
+<label>任务自动续接总上限<input id="cap" type="number" min="1" max="100" value="10"></label>
+<button id="enable">启用当前对话</button><button id="pause">暂停</button><button id="stop">停止任务</button>
+<label><input id="confirmed" type="checkbox" style="width:auto">已检查最后一条消息并手动发送恢复说明</label><button id="reconcile">人工确认恢复</button>
+<p id="error"></p><div id="status">正在读取…</div><div id="approvals"></div>
+<details><summary>发送诊断</summary><pre id="diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere">暂无记录</pre></details>
+<script type="module" src="popup.js"></script></body></html>

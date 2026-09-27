@@ -1,0 +1,14 @@
+.venv/
+.data/
+.tools/
+.superpowers/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+*.db*
+*.log
+config.local.toml
+secrets*
+dist/
+build/
+wheelhouse/

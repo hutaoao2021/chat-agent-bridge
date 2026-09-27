@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chat-agent-bridge"
+version = "0.2.0"
+requires-python = ">=3.14"
+dependencies = ["mcp==2.2.0", "psutil==7.2.2"]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "httpx>=0.28"]
+
+[project.scripts]
+chat-agent-bridge = "chat_agent_bridge.main:main"
+chat-agent-bridge-desktop = "chat_agent_bridge.desktop:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

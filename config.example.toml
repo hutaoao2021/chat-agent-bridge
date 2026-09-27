@@ -1,0 +1,25 @@
+# Copy to config.local.toml and select only your authorized test project.
+[[workspaces]]
+name = "demo"
+root = "demo"
+allow_write = false
+allow_command = false
+allow_git_write = false
+ssh_targets = []
+
+[server]
+port = 8899
+extension_port = 8900
+
+[limits]
+max_jobs = 4
+job_timeout_seconds = 3600
+max_log_bytes = 8388608
+
+# [[ssh_targets]]
+# name = "test-host"
+# alias = "your-existing-ssh-alias"
+# remote_root = "/home/you/test-project"
+# wrapper_path = "/home/you/.chat-agent-bridge/remote_job_runner.py"
+# allow_write = false
+# allow_command = false
