@@ -11,6 +11,7 @@ import psutil
 from mcp import Client
 from chat_agent_bridge.state import TaskStore
 from chat_agent_bridge.auth import PairingManager
+from chat_agent_bridge.process_scope import OwnedProcess
 
 def port():
     with socket.socket() as s:s.bind(('127.0.0.1',0));return s.getsockname()[1]
@@ -33,7 +34,10 @@ async def flow(tmp_path):
     store=TaskStore(data/'state.db');auth=PairingManager(store)
     code=auth.issue_code();origin='chrome-extension://'+'a'*32
     process=None; output=(tmp_path/'service.log').open('ab')
-    def launch():return subprocess.Popen([sys.executable,'-m','chat_agent_bridge.main','--config',str(config),'--data-dir',str(data)],stdout=output,stderr=output)
+    def launch():
+        owner=OwnedProcess([sys.executable,'-m','chat_agent_bridge.main','--config',str(config),'--data-dir',str(data)],allow_breakaway=True,stdout=output,stderr=output)
+        owner.process._bridge_owner=owner
+        return owner.process
     async def ready():
         async with httpx.AsyncClient(trust_env=False,timeout=2) as http:
             for _ in range(100):
@@ -80,9 +84,6 @@ async def flow(tmp_path):
         output.close()
 
 def stop_service(process):
-    # Windows venv launchers have a direct child running the actual service.
-    # Leave detached job workers (grandchildren) running for restart verification.
-    try:
-        for child in psutil.Process(process.pid).children():child.kill()
-    except psutil.NoSuchProcess:pass
-    process.terminate();process.wait(timeout=5)
+    # Use the same owned scope as desktop startup. Full Python has no venv
+    # launcher child; killing all direct children would kill job_runner itself.
+    process._bridge_owner.terminate_owned();process.wait(timeout=5)

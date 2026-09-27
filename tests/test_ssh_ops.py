@@ -77,5 +77,5 @@ def test_remote_cancel_before_acceptance_is_a_tombstone(tmp_path):
 def test_short_remote_output_has_serializable_byte_budget(tmp_path):
     import runpy
     execute=runpy.run_path('scripts/remote_job_runner.py')['execute']
-    result=execute('run',{'root':str(tmp_path),'argv':[sys.executable,'-c',"print('中'*30000)"],'timeout':5})
+    result=execute('run',{'root':str(tmp_path),'argv':[sys.executable,'-X','utf8','-c',"print('中'*30000)"],'timeout':5})
     assert len(result['stdout'].encode())<=24000 and result['truncated']
