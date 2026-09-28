@@ -1,1 +1,1 @@
-{"name":"chat-agent-bridge-extension","version":"0.2.0","private":true,"type":"module","scripts":{"test":"node --test"}}
+{"name":"chat-agent-bridge-extension","version":"0.2.1","private":true,"type":"module","scripts":{"test":"node --test"}}

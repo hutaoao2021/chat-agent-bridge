@@ -114,7 +114,7 @@ def assert_maintenance_ready(layout):
         try:
             process = psutil.Process(identity['pid'])
             if abs(process.create_time() - identity['created_at']) < .001 and process.is_running():
-                raise ValueError('后台任务仍在运行；请等待完成或在扩展取消任务后再更新/卸载')
+                raise ValueError('后台命令仍在运行；请等待退出，或在扩展点击“停止任务”并确认命令已退出后再更新/卸载')
         except psutil.NoSuchProcess:
             pass
         except psutil.AccessDenied:
@@ -127,62 +127,62 @@ def collect_diagnostics(layout):
         checks.append({'component': component, 'status': status, 'code': code, 'message': message})
     try:
         settings = load_settings(layout)
+    except Exception:
+        add('设置', 'error', 'invalid_settings', '设置无法读取或校验失败；请检查文件，必要时在连接页备份并重置')
+        settings = DesktopSettings()
+    else:
         config = layout.data_dir / 'config.local.toml'
         if not config.exists():
             add('设置', 'waiting', 'missing_config', '请先选择工作区并保存设置')
         else:
-            Config.load(config)
-            add('设置', 'ok', 'valid', '配置有效')
-        add('工作区', 'ok' if settings.workspaces else 'waiting', 'configured' if settings.workspaces else 'missing_workspace',
-            f'已配置 {len(settings.workspaces)} 个工作区' if settings.workspaces else '请添加工作目录')
-    except Exception:
-        add('设置', 'error', 'invalid_config', '配置不可读取或不合法，请修复设置')
-        settings = DesktopSettings()
-    add('运行环境', 'ok' if layout.python.is_file() and layout.pythonw.is_file() else 'error',
-        'installed' if layout.python.is_file() else 'runtime_missing', '运行环境完整' if layout.python.is_file() and layout.pythonw.is_file() else '运行环境缺失，请修复安装')
+            try:
+                Config.load(config)
+                add('设置', 'ok', 'valid', '本机配置格式和工作目录检查通过；云端权限未核验')
+            except Exception:
+                add('设置', 'error', 'invalid_config', '服务配置无法读取或校验失败；检查工作目录，修正后保存设置')
+    unavailable = sum(not w.root.is_dir() for w in settings.workspaces)
+    add('工作区', 'error' if unavailable else 'ok' if settings.workspaces else 'waiting',
+        'workspace_unavailable' if unavailable else 'configured' if settings.workspaces else 'missing_workspace',
+        f'已保存 {len(settings.workspaces)} 个工作区，其中 {unavailable} 个目录不可用' if unavailable else
+        f'已保存 {len(settings.workspaces)} 个工作区；目录存在，具体工具调用未核验' if settings.workspaces else '请添加工作目录')
+    runtime_present = layout.python.is_file() and layout.pythonw.is_file()
+    add('运行环境', 'unknown' if runtime_present else 'error',
+        'files_present' if runtime_present else 'runtime_missing', '解释器文件存在；依赖和运行能力未在此检查中核验' if runtime_present else '解释器文件缺失，请修复安装')
     probe = Probe()
     bridge = probe.bridge(layout, settings)
     add('Bridge', 'ok' if bridge == 'ready' else 'error' if bridge == 'conflict' else 'waiting',
         {'ready': 'local_ready', 'conflict': 'port_conflict', 'missing': 'not_running'}[bridge],
-        {'ready': '本地服务就绪', 'conflict': '端口由其他实例或程序占用，请检查旧服务', 'missing': '本地服务未启动'}[bridge])
-    add('代理', 'ok' if probe.proxy(settings) else 'waiting', 'direct' if not settings.proxy_url else 'local_proxy',
-        '使用直连' if not settings.proxy_url else '代理端口可用' if probe.proxy(settings) else '等待本地代理启动')
+        {'ready': '本机 Bridge 健康接口响应且实例匹配；MCP 工具调用需实测', 'conflict': '端口已有监听，但未确认是当前 Bridge 实例', 'missing': '未检测到 Bridge 监听；请启动并再次检查'}[bridge])
+    proxy_listening = probe.proxy(settings)
+    add('代理', 'unknown' if proxy_listening else 'waiting', 'direct' if not settings.proxy_url else 'local_proxy',
+        '未配置代理；直连网络未测试' if not settings.proxy_url else '代理端口可连接；转发能力和外网连接未测试' if proxy_listening else '未检测到代理端口监听，请检查代理软件')
     key = layout.data_dir / 'autostart' / 'tunnel-key.dpapi'
     try:
         if not key.exists():
             add('凭据', 'waiting', 'credential_missing', '尚未保存 Tunnel 密钥')
         else:
             read_key(key)
-            add('凭据', 'ok', 'encrypted', '密钥已加密保存；空白输入表示保留')
+            add('凭据', 'unknown', 'decryptable', '本机可解密已保存密钥；有效性和云端权限未核验')
     except Exception:
         add('凭据', 'error', 'decrypt_failed', '当前用户无法解密，请重新填写密钥')
-    add('Tunnel 客户端', 'ok' if layout.tunnel_client.is_file() else 'error', 'installed' if layout.tunnel_client.is_file() else 'client_missing',
-        '客户端存在' if layout.tunnel_client.is_file() else '客户端缺失，请修复安装')
-    tunnel_state = 'not_running'
-    try:
-        # Only an explicit control-plane connectivity indicator can mean cloud connected.
-        status = local_json(settings.tunnel_port, '/status')
-        if status.get('control_plane_connected') is True:
-            tunnel_state = 'cloud_connected'
-        else:
-            tunnel_state = 'cloud_unknown'
-    except Exception:
-        if occupied(settings.tunnel_port):
-            tunnel_state = 'cloud_unknown'
-    add('Tunnel', 'ok' if tunnel_state == 'cloud_connected' else 'waiting', tunnel_state,
-        {'not_running': 'Tunnel 未启动', 'cloud_unknown': '本地监听存在；云端状态请在 Tunnel 管理页或 ChatGPT 实测核对', 'cloud_connected': '客户端明确报告云端连接成功'}[tunnel_state])
+    add('Tunnel 客户端', 'unknown' if layout.tunnel_client.is_file() else 'error', 'files_present' if layout.tunnel_client.is_file() else 'client_missing',
+        '客户端文件存在；可执行性未在此检查中核验' if layout.tunnel_client.is_file() else '客户端文件缺失，请修复安装')
+    tunnel_listening = occupied(settings.tunnel_port)
+    add('Tunnel', 'unknown', 'listener_present' if tunnel_listening else 'no_listener',
+        '管理端口有监听；未确认监听程序或云端连接，请查看管理页并实测 ChatGPT 调用' if tunnel_listening else
+        '未检测到管理端口监听；无法据此确定客户端进程或云端连接状态')
     alive = supervisor_alive(layout)
-    add('后台', 'ok' if alive else 'waiting', 'supervised' if alive else 'not_running', '监督程序已启动' if alive else '监督程序未启动')
-    add('Git', 'ok' if shutil.which('git') else 'waiting', 'available' if shutil.which('git') else 'missing', 'Git 可用' if shutil.which('git') else '需要 Git 操作时请安装 Git')
-    add('SSH', 'ok' if shutil.which('ssh') else 'waiting', 'available' if shutil.which('ssh') else 'missing', 'OpenSSH 可用；远端连接需单独验证' if shutil.which('ssh') else '需要远端工作时请安装 OpenSSH')
+    add('后台', 'unknown' if alive else 'waiting', 'supervised' if alive else 'not_running', '后台实例标记存在；Bridge 和 Tunnel 是否就绪需分别核对' if alive else '未检测到后台实例标记')
+    add('Git', 'unknown' if shutil.which('git') else 'waiting', 'command_found' if shutil.which('git') else 'missing', '检测到 Git 命令；版本和仓库操作未核验' if shutil.which('git') else '未检测到 Git 命令；需要 Git 操作时请安装并配置 PATH')
+    add('SSH', 'unknown' if shutil.which('ssh') else 'waiting', 'command_found' if shutil.which('ssh') else 'missing', '检测到 ssh 命令；客户端类型和远端连接未核验' if shutil.which('ssh') else '未检测到 ssh 命令；需要远端工作时请安装并配置 OpenSSH')
     try:
         if not (layout.data_dir / 'state.db').exists():
             add('扩展配对', 'waiting', 'unpaired', '尚未配对；可先导入旧版或生成一次性码')
             raise FileNotFoundError('No task database yet')
         store = TaskStore(layout.data_dir / 'state.db')
         tokens = [t for t in store.records('token') if not t.get('revoked') and t.get('expires', 0) > time.time()]
-        add('扩展配对', 'ok' if tokens else 'waiting', 'paired' if tokens else 'unpaired',
-            f'存在 {len(tokens)} 个有效浏览器配对；对话工作模式在扩展里查看' if tokens else '请生成一次性码，在浏览器扩展首次配对')
+        add('扩展配对', 'unknown' if tokens else 'waiting', 'token_present' if tokens else 'unpaired',
+            f'本机保存 {len(tokens)} 个未过期配对凭据；浏览器当前是否连接需在扩展核对' if tokens else '未找到未过期配对凭据；请生成配对码，在浏览器扩展配对')
         with store.transaction() as db:
             active = db.execute("SELECT count(*) FROM tasks WHERE status NOT IN ('completed','blocked','cancelled')").fetchone()[0]
             pending = db.execute("SELECT count(*) FROM approvals WHERE decision='pending'").fetchone()[0]

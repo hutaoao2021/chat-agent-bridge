@@ -7,13 +7,13 @@
 [Setup]
 AppId=ChatAgentBridge.Desktop
 AppName=Chat Agent Bridge
-AppVersion=0.2.0
+AppVersion=0.2.1
 DefaultDirName={localappdata}\ChatAgentBridge\app
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
-OutputBaseFilename=ChatAgentBridge-Setup-0.2.0-x64
+OutputBaseFilename=ChatAgentBridge-Setup-0.2.1-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -41,12 +41,12 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
-  if not StopInstalled(False) then Result := 'Could not confirm shutdown. Close Chat Agent Bridge, check diagnostics and retry.';
+  if not StopInstalled(False) then Result := 'Service shutdown or absence of running jobs could not be confirmed. Check tasks and diagnostics before retrying.';
 end;
 function InitializeUninstall(): Boolean;
 begin
   Result := StopInstalled(True);
-  if not Result then MsgBox('Could not confirm shutdown; uninstall cancelled. Check diagnostics and retry.', mbError, MB_OK);
+  if not Result then MsgBox('Services or jobs may still be running; uninstall cancelled. Check tasks and diagnostics before retrying.', mbError, MB_OK);
 end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var DataPath: String;

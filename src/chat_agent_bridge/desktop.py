@@ -39,7 +39,7 @@ class Manager:
         except Exception:
             self.settings = DesktopSettings()
             self._load_error = True
-            initial_error = '配置损坏，已禁止覆盖保存。请先备份并重置设置；密钥和任务记录会保留。'
+            initial_error = '设置无法读取或校验失败，已禁止覆盖保存。请先检查原因；必要时在连接页备份并重置设置。'
         self.workspaces = list(self.settings.workspaces)
         self.ssh_targets = list(self.settings.ssh_targets)
         root.title('Chat Agent Bridge · 本地工作桥')
@@ -97,9 +97,13 @@ class Manager:
                 else:
                     if operation == '检查状态':
                         self.checks = result; self.render_checks()
-                        self.message.set('状态已更新。窗口关闭后后台服务仍可继续运行。')
+                        self.message.set('检查结果已更新。已检测到的事实见诊断说明；未核验项目不代表已连接或可用。')
+                    elif operation in ('启动', '重启'):
+                        self.message.set(operation + '请求已处理；请稍后点击“检查状态”核对服务。此提示不代表 Tunnel 或 ChatGPT 已连接。')
+                    elif operation == '停止':
+                        self.message.set('本软件的后台服务已停止；已启动的持久命令可能仍在运行。“停止”不会取消这些命令。')
                     elif operation == '生成配对码':
-                        self.code.set(result[0]); self.pair_expiry.set('有效至 ' + time.strftime('%H:%M:%S', time.localtime(result[1])) + '，仅首次配对需要。')
+                        self.code.set(result[0]); self.pair_expiry.set('配对码有效至 ' + time.strftime('%H:%M:%S', time.localtime(result[1])) + '，限使用一次；凭据失效时需重新配对。')
                     elif operation == '重置设置':
                         self.settings = load_settings(self.layout); self._load_error = False
                         self.workspaces = list(self.settings.workspaces); self.ssh_targets = list(self.settings.ssh_targets)
@@ -122,7 +126,7 @@ class Manager:
         page = self.pages['首页']
         ttk.Label(page, text='运行状态', font=('Microsoft YaHei UI', 15, 'bold')).pack(anchor='w')
         self.overview = tk.StringVar(value='正在检查…')
-        ttk.Label(page, textvariable=self.overview, justify='left', wraplength=850).pack(anchor='w', pady=18)
+        ttk.Label(page, textvariable=self.overview, justify='left', wraplength=780).pack(anchor='w', pady=10)
         bar = ttk.Frame(page); bar.pack(anchor='w')
         self.button(bar, '启动', lambda: self.action('启动', self.controller.start))
         self.button(bar, '停止', lambda: self.action('停止', self.controller.stop))
@@ -131,9 +135,9 @@ class Manager:
         bar = ttk.Frame(page); bar.pack(anchor='w')
         self.button(bar, '打开 ChatGPT', lambda: webbrowser.open('https://chatgpt.com'))
         self.button(bar, '导入旧版设置', self.import_old)
-        ttk.Separator(page).pack(fill='x', pady=20)
+        ttk.Separator(page).pack(fill='x', pady=12)
         ttk.Label(page, text='日常使用', font=('Microsoft YaHei UI', 13, 'bold')).pack(anchor='w')
-        ttk.Label(page, text='登录 Windows 后可自动运行，无需两个终端。\n在已启用的 ChatGPT 对话直接发送需求；新工作对话首次启用一次。\n执行命令需在浏览器扩展里审批。任务完成后等待下一条需求。\n\n关闭本窗口不会停止后台服务；停止按钮只停止本软件启动的服务。', justify='left', wraplength=850).pack(anchor='w', pady=12)
+        ttk.Label(page, text='在连接页勾选并保存登录后自动运行；网络和账号配置有效时可后台连接。\n已启用工作模式的对话可直接发送需求；暂停或解除配对后需重新启用。\n命令需在扩展里审批；续接需保持 ChatGPT 页面可用，并受账号额度限制。\n\n关闭窗口不停止服务。“停止”停止本软件的服务，已启动的持久命令可能继续运行。\n要取消任务及其命令，请在服务运行时使用扩展“停止任务”，并核对取消结果。', justify='left', wraplength=850).pack(anchor='w', pady=12)
 
     def workspace_page(self):
         page = self.pages['工作区']
@@ -148,7 +152,7 @@ class Manager:
         self.button(bar, '移除选中', self.remove_workspace)
         self.button(bar, '高级 SSH', self.edit_ssh)
         self.button(bar, '保存设置', self.save)
-        ttk.Label(page, text='开启命令权限后，每条命令仍需审批；命令以当前 Windows 用户权限运行。', wraplength=850).pack(anchor='w', pady=8)
+        ttk.Label(page, text='开启命令权限后，每条命令仍需审批。本机命令使用当前 Windows 用户身份；SSH 命令使用目标 SSH 账号身份。', wraplength=780).pack(anchor='w', pady=8)
         self.render_workspaces()
 
     def render_workspaces(self):
@@ -189,7 +193,7 @@ class Manager:
     def edit_ssh(self):
         window = tk.Toplevel(self.root); window.title('高级 SSH 设置'); window.geometry('780x470'); window.transient(self.root)
         frame = ttk.Frame(window, padding=16); frame.pack(fill='both', expand=True)
-        ttk.Label(frame, text='使用已配置的 OpenSSH 别名。修改 JSON 后校验；关联工作区的 ssh_targets 填目标名称。', wraplength=730).pack(anchor='w')
+        ttk.Label(frame, text='使用已配置的 OpenSSH 别名。在 workspaces 中给工作区填写 targets 的目标名称。校验通过后还需在主窗口保存设置；此处不测试远端连接。', wraplength=730).pack(anchor='w')
         editor = tk.Text(frame, height=15, font=('Consolas', 10), undo=True); editor.pack(fill='both', expand=True, pady=10)
         from dataclasses import asdict
         editor.insert('1.0', json.dumps({'targets': [asdict(t) for t in self.ssh_targets], 'workspaces': {w.name: list(w.ssh_targets) for w in self.workspaces}}, ensure_ascii=False, indent=2))
@@ -207,7 +211,7 @@ class Manager:
         page = self.pages['连接']
         self.fields = {name: tk.StringVar() for name in ('tunnel_id', 'proxy_url', 'mcp_port', 'control_port', 'tunnel_port')}
         self.secret = tk.StringVar(); self.autostart = tk.BooleanVar()
-        labels = [('tunnel_id', 'Tunnel ID'), ('proxy_url', '本地 HTTP / Mixed 代理（留空直连）'), ('mcp_port', 'MCP 端口'), ('control_port', '扩展控制端口'), ('tunnel_port', 'Tunnel 管理端口')]
+        labels = [('tunnel_id', 'Tunnel ID（平台创建后填写）'), ('proxy_url', '本地 HTTP 代理地址（留空直连）'), ('mcp_port', '本机 MCP 服务端口'), ('control_port', '本机扩展控制端口'), ('tunnel_port', 'Tunnel 本机管理端口')]
         for key, label in labels:
             row = ttk.Frame(page); row.pack(fill='x', pady=6)
             ttk.Label(row, text=label, width=38).pack(side='left'); ttk.Entry(row, textvariable=self.fields[key]).pack(side='left', fill='x', expand=True)
@@ -218,7 +222,7 @@ class Manager:
         self.button(bar, '保存设置', self.save); self.button(bar, '检查连接状态', self.refresh)
         self.button(bar, '打开 Tunnel 设置', lambda: webbrowser.open('https://platform.openai.com/settings/organization/tunnels'))
         self.button(bar, '备份并重置设置', self.reset_settings)
-        ttk.Label(page, text='密钥用 Windows 当前用户加密保存，不写入普通配置。\n保存不依赖联网；连接和权限由实际 Tunnel 客户端检查。\n连接参数修改后，请在首页重启服务。', justify='left', wraplength=850).pack(anchor='w', pady=18)
+        ttk.Label(page, text='密钥由当前 Windows 用户加密保存。配对码用于浏览器连接，不是 API key。\n保存只校验本机设置格式，不核验密钥有效性、云端权限或网络。\n代理须提供 HTTP 转发；Mixed 端口需支持 HTTP，本软件不接收 SOCKS 地址。\n更改设置后在首页重启；ChatGPT 账号接入需另行配置。', justify='left', wraplength=850).pack(anchor='w', pady=18)
         self.load_connection()
 
     def load_connection(self):
@@ -244,12 +248,12 @@ class Manager:
     def extension_page(self):
         page = self.pages['扩展']
         ttk.Label(page, text='首次设置浏览器', font=('Microsoft YaHei UI', 14, 'bold')).pack(anchor='w')
-        ttk.Label(page, text='1. 浏览器扩展管理页 → 开发者模式 → 加载已解压缩的扩展 → 选择扩展目录。\n2. 在这里生成配对码，在扩展弹窗输入一次。已连接后空白码框是正常状态。\n3. ChatGPT 注册 MCP 连接，选择此电脑的 Tunnel。\n4. 每个工作对话首次启用一次；之后直接发送需求。', justify='left', wraplength=850).pack(anchor='w', pady=15)
+        ttk.Label(page, text='1. 在 Chrome / Edge 扩展管理页开启浏览器开发者模式，加载下方扩展目录。\n2. 本机 Bridge 运行后，在此生成配对码，到扩展弹窗输入并配对。\n3. 在 ChatGPT 创建开发者模式连接并选择 Tunnel；账号权限和关联要求见安装说明。\n4. 在已有工作对话启用工作模式；首次发送时保留扩展加入的任务说明。\n浏览器开发者模式与 ChatGPT 开发者模式是两个独立设置。', justify='left', wraplength=850).pack(anchor='w', pady=15)
         bar = ttk.Frame(page); bar.pack(anchor='w')
         self.button(bar, '打开扩展目录', lambda: self.open_path(self.layout.extension_dir))
         self.button(bar, '复制 Chrome 扩展页地址', lambda: self.copy('chrome://extensions'))
         self.button(bar, '复制 Edge 扩展页地址', lambda: self.copy('edge://extensions'))
-        self.code = tk.StringVar(); self.pair_expiry = tk.StringVar(value='配对只需首次操作，凭据过期或撤销时再配对。')
+        self.code = tk.StringVar(); self.pair_expiry = tk.StringVar(value='配对码有效 5 分钟，限一次使用；配对凭据有效 30 天，失效或丢失时需重新配对。')
         ttk.Entry(page, textvariable=self.code, state='readonly').pack(fill='x', pady=16)
         ttk.Label(page, textvariable=self.pair_expiry).pack(anchor='w')
         bar = ttk.Frame(page); bar.pack(anchor='w')
@@ -272,8 +276,8 @@ class Manager:
     def render_checks(self):
         self.diagnostic_tree.delete(*self.diagnostic_tree.get_children())
         for row in self.checks:
-            self.diagnostic_tree.insert('', 'end', values=(row['component'], {'ok': '正常', 'waiting': '等待', 'error': '异常'}[row['status']], row['message']))
-        self.overview.set('\n\n'.join(f"{r['component']}：{r['message']}" for r in self.checks if r['component'] in ('Bridge', 'Tunnel', '代理', '扩展配对', '后台')))
+            self.diagnostic_tree.insert('', 'end', values=(row['component'], {'ok': '检查通过', 'unknown': '未核验', 'waiting': '待处理', 'error': '检查异常'}[row['status']], row['message']))
+        self.overview.set('\n'.join(f"{r['component']}：{r['message']}" for r in self.checks if r['component'] in ('Bridge', 'Tunnel', '代理', '扩展配对', '后台')))
 
     def export(self):
         target = filedialog.asksaveasfilename(parent=self.root, defaultextension='.json', initialfile='bridge-diagnostics.json')
@@ -297,7 +301,7 @@ class Manager:
         for label, name in [('使用手册', 'user-guide.md'), ('新电脑安装', 'new-computer.md'), ('故障排查', 'troubleshooting.md')]:
             bar = ttk.Frame(page); bar.pack(anchor='w')
             self.button(bar, label, lambda filename=name: self.read_help(filename))
-        ttk.Label(page, text='工作流程\n\n你发送需求 → 扩展准备绑定 → ChatGPT 通过 Tunnel 调用 Bridge\n→ 读取/修改已授权项目 → 命令审批 → 保存进度 → 自动续接 → 完成停止。\n\n扩展与 ChatGPT 账号接入仅需首次配置；新电脑重新设置本机密钥和浏览器配对。', justify='left', wraplength=850).pack(anchor='w', pady=20)
+        ttk.Label(page, text='工作流程（需账号接入和本地服务可用）\n\n发送需求 → 扩展准备任务绑定 → ChatGPT 调用 Bridge\n→ 按工作区权限读取或修改 → 请求命令审批 → 保存进度 → 符合条件时续接。\n完成状态来自 Bridge 任务记录；具体修改和测试结果需核对工具返回。\n\n工作模式仅作用于已启用对话。浏览器配对、任务绑定与账号 Tunnel 接入用途不同。\n本软件为独立实现的预览版；尚未验收的场景见验证记录。', justify='left', wraplength=850).pack(anchor='w', pady=20)
 
     def read_help(self, filename):
         path = self.layout.app_dir / 'docs' / filename
@@ -314,7 +318,7 @@ class Manager:
 
     def import_old(self):
         source = filedialog.askdirectory(parent=self.root, title='选择旧版项目目录')
-        if source and messagebox.askokcancel('导入旧版', '只复制配置、任务记录及当前用户可解密密钥；原目录不修改。目标已有数据时拒绝覆盖。', parent=self.root):
+        if source and messagebox.askokcancel('导入旧版', '复制设置、任务记录、已结束的本机命令日志和可解密密钥；项目文件不迁移。旧版本机命令记录未确认结束或目标已有数据时拒绝导入。远端命令需另行确认已结束。导入后需核对登录启动设置。', parent=self.root):
             self.action('导入旧版', lambda: import_legacy(self.layout, Path(source)))
 
 

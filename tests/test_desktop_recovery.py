@@ -7,6 +7,7 @@ import sys
 import time
 from types import SimpleNamespace
 import pytest
+import psutil
 from chat_agent_bridge import desktop_controller as dc, desktop_settings as ds, supervisor as sp
 from chat_agent_bridge.config import WorkspacePolicy
 from chat_agent_bridge.state import TaskStore
@@ -125,6 +126,11 @@ time.sleep(30)
         owner.terminate_owned();owner.process.wait(timeout=5)
         chunk=wait(manager,SimpleNamespace(id=job['id']))
         assert chunk.status=='completed' and 'persistent-done' in chunk.stdout
+        # The exit receipt is written just before the runner process returns.
+        # Maintenance correctly waits for actual process exit, not only a receipt.
+        identity=json.loads((Path(job['log_dir'])/job['id']/'identity.json').read_text())
+        try: psutil.Process(identity['pid']).wait(timeout=5)
+        except psutil.NoSuchProcess: pass
         dc.assert_maintenance_ready(layout)
         following=manager.start([sys.executable,'-c','pass'],project,task.id,'two');assert wait(manager,following).status=='completed'
     finally:

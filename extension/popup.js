@@ -12,11 +12,11 @@ async function refresh() {
   if (paired) el('base').value = paired.base;
   if (!conversation) { el('status').textContent = '请打开已有 ChatGPT 对话。首次使用先正常发一条消息，使 URL 包含 /c/对话ID。'; return; }
   const state = await send('GET_STATUS'); task = state.settings.awaitingTask ? null : state.task;
-  el('pairing-detail').textContent = state.paired ? '已连接；配对码留空正常。' + (state.pairingExpiresAt ? ' 有效至 ' + new Date(state.pairingExpiresAt * 1000).toLocaleDateString() : ' 旧配对期限未知，可继续使用。') : '仅首次安装、撤销配对或凭据过期时需要配对。';
-  el('work-mode').textContent = state.workMode?.enabled ? '此对话工作模式已开启：以后直接发送需求，自动准备绑定。' : '此对话是普通聊天；启用一次后会记住工作模式。';
+  el('pairing-detail').textContent = state.paired ? '与本机 Bridge 配对有效；不代表 Tunnel 或 ChatGPT 接入成功。' + (state.pairingExpiresAt ? ' 有效至 ' + new Date(state.pairingExpiresAt * 1000).toLocaleDateString() : ' 未保存期限信息；本次本机状态请求已通过。') : '未配对；首次使用、凭据过期、撤销或丢失后需重新配对。';
+  el('work-mode').textContent = state.workMode?.enabled ? '此对话工作模式已开启：新任务会准备绑定，活动任务会沿用；续接状态见下方。' : '此对话未启用工作模式。启用后会记住；暂停或解除配对后需重新启用。';
   el('diagnostics').textContent = state.settings.sendTrace?.length ? JSON.stringify(state.settings.sendTrace, null, 2) : '暂无记录';
   const uncertain = (state.job_cancellations || []).filter(job => ['unknown','cancel_unknown'].includes(job.status));
-  el('status').textContent = `配对：${state.paired ? '已连接' : '未连接'}\n续接：${state.settings.enabled ? '启用' : '暂停'}\n状态：${task?.status || '尚未创建任务'}\n任务：${task?.id || '—'}\n续接次数（含人工跳过）：${task?.turn_count || 0}\n${state.settings.reason || ''}${uncertain.length ? '\n取消结果未确认：'+uncertain.map(job=>job.id).join(', ') : ''}`;
+  el('status').textContent = `本机配对：${state.paired ? '有效' : '未配对'}\n续接：${state.settings.enabled ? '启用' : '暂停'}\n任务记录状态：${task?.status || '尚未创建任务'}\n任务：${task?.id || '—'}\n续接次数（含人工跳过）：${task?.turn_count || 0}\n${state.settings.reason || ''}${uncertain.length ? '\n取消结果未确认：'+uncertain.map(job=>job.id).join(', ') : ''}`;
   el('cap').value = state.settings.maxTurns;
   el('approvals').replaceChildren();
   for (const approval of state.settings.awaitingTask ? [] : state.approvals || []) {
