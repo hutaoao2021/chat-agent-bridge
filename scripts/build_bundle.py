@@ -35,7 +35,7 @@ def build(source, python_root, tunnel_root, output):
     shutil.copytree(python_root, stage/'runtime', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     runtime = stage/'runtime/python.exe'
     run([runtime, '-I', '-B', '-m', 'pip', 'install', '--no-index', '--no-compile', '--find-links', wheelhouse,
-         '-c', source/'requirements.lock', 'chat-agent-bridge==0.2.1'], env=env)
+         '-c', source/'requirements.lock', 'chat-agent-bridge==0.2.2'], env=env)
     for folder in ('extension', 'docs'):
         shutil.copytree(source/folder, stage/folder, ignore=shutil.ignore_patterns('tests', 'superpowers', '__pycache__', '*.pyc'))
     shutil.copytree(tunnel_root, stage/'tools/tunnel-client')
@@ -50,10 +50,10 @@ def build(source, python_root, tunnel_root, output):
     metadata = json.loads(subprocess.check_output([runtime, '-I', '-B', '-c', code], env=env, text=True))
     (licenses/'python-dependencies.json').write_text(json.dumps(metadata, indent=2), encoding='utf-8')
     verify_bundle(stage, run_imports=True)
-    with zipfile.ZipFile(output/'ChatAgentBridge-Extension-0.2.1.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+    with zipfile.ZipFile(output/'ChatAgentBridge-Extension-0.2.2.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
         for p in sorted((stage/'extension').rglob('*')):
             if p.is_file(): archive.write(p, p.relative_to(stage/'extension'))
-    manifest = {'version':'0.2.1', 'python':'3.14.3', 'tunnel_client':'v0.0.15',
+    manifest = {'version':'0.2.2', 'python':'3.14.3', 'tunnel_client':'v0.0.15',
                 'sources':{'python':'https://www.python.org/ftp/python/3.14.3/',
                            'tunnel':'https://github.com/openai/tunnel-client/releases/tag/v0.0.15'},
                 'python_exe_sha256':sha(runtime), 'tunnel_exe_sha256':sha(stage/'tools/tunnel-client/tunnel-client.exe'),

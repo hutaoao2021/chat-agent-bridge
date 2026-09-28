@@ -44,7 +44,7 @@ class Manager:
         self.ssh_targets = list(self.settings.ssh_targets)
         root.title('Chat Agent Bridge · 本地工作桥')
         root.geometry('960x730')
-        root.minsize(850, 640)
+        root.minsize(850, 730)
         root.configure(bg='#f3f6fa')
         style = ttk.Style(root)
         if 'clam' in style.theme_names(): style.theme_use('clam')
@@ -63,7 +63,7 @@ class Manager:
         for name in ('首页', '工作区', '连接', '扩展', '诊断', '帮助'):
             page = ttk.Frame(notebook, padding=18); notebook.add(page, text=name); self.pages[name] = page
         self.message = tk.StringVar(value=initial_error or '首次使用：选择工作区 → 保存连接设置 → 启动 → 安装扩展并配对。')
-        ttk.Label(root, textvariable=self.message, wraplength=900).pack(fill='x', padx=24, pady=(5, 16))
+        ttk.Label(root, textvariable=self.message, wraplength=780).pack(fill='x', padx=24, pady=(5, 16), before=notebook)
         self.home(); self.workspace_page(); self.connection_page(); self.extension_page(); self.diagnostics_page(); self.help_page()
         self.root.after(100, self.refresh)
         self.root.after(100, self.consume)
@@ -137,7 +137,7 @@ class Manager:
         self.button(bar, '导入旧版设置', self.import_old)
         ttk.Separator(page).pack(fill='x', pady=12)
         ttk.Label(page, text='日常使用', font=('Microsoft YaHei UI', 13, 'bold')).pack(anchor='w')
-        ttk.Label(page, text='在连接页勾选并保存登录后自动运行；网络和账号配置有效时可后台连接。\n已启用工作模式的对话可直接发送需求；暂停或解除配对后需重新启用。\n命令需在扩展里审批；续接需保持 ChatGPT 页面可用，并受账号额度限制。\n\n关闭窗口不停止服务。“停止”停止本软件的服务，已启动的持久命令可能继续运行。\n要取消任务及其命令，请在服务运行时使用扩展“停止任务”，并核对取消结果。', justify='left', wraplength=850).pack(anchor='w', pady=12)
+        ttk.Label(page, text='在连接页勾选并保存登录后自动运行；网络和账号配置有效时可后台连接。\n浏览器配对后还需在 ChatGPT 创建并选用 Tunnel App；需要工具的消息须选用该 App。\n已启用工作模式的对话可发送需求；暂停或解除配对后需重新启用。\n扩展可发送续接消息，但不会为续接消息选 App；后续工具调用须另行验证。\n命令需在扩展里审批；续接还受页面可用性与账号额度限制。\n\n关闭窗口不停止服务。“停止”停止本软件的服务，已启动的持久命令可能继续运行。\n要取消任务及其命令，请在服务运行时使用扩展“停止任务”，并核对取消结果。', justify='left', wraplength=780).pack(anchor='w', pady=8)
 
     def workspace_page(self):
         page = self.pages['工作区']
@@ -247,12 +247,13 @@ class Manager:
 
     def extension_page(self):
         page = self.pages['扩展']
-        ttk.Label(page, text='首次设置浏览器', font=('Microsoft YaHei UI', 14, 'bold')).pack(anchor='w')
-        ttk.Label(page, text='1. 在 Chrome / Edge 扩展管理页开启浏览器开发者模式，加载下方扩展目录。\n2. 本机 Bridge 运行后，在此生成配对码，到扩展弹窗输入并配对。\n3. 在 ChatGPT 创建开发者模式连接并选择 Tunnel；账号权限和关联要求见安装说明。\n4. 在已有工作对话启用工作模式；首次发送时保留扩展加入的任务说明。\n浏览器开发者模式与 ChatGPT 开发者模式是两个独立设置。', justify='left', wraplength=850).pack(anchor='w', pady=15)
+        ttk.Label(page, text='浏览器扩展与 ChatGPT App', font=('Microsoft YaHei UI', 14, 'bold')).pack(anchor='w')
+        ttk.Label(page, text='1. 在 Chrome / Edge 扩展管理页加载下方目录，生成配对码并在扩展弹窗配对。这只连接浏览器与本机。\n2. 在 ChatGPT 的 Plugins → ＋ 创建开发者模式 App；连接选 Tunnel，选当前 Tunnel，扫描工具并创建。无需另下载 App。\n3. 需要 Bridge 工具的消息须选用该 App（或在消息中提及）；选用只对当前消息生效。已有 App 可直接选用。\n4. 在工作对话启用扩展工作模式；首次发送保留扩展加入的任务说明。\n自动续接只发送消息，不会替后续消息选 App；工具调用能否成功需现场验证。\n浏览器和 ChatGPT 的开发者模式分开设置；看不到 App 或 Tunnel 时请核对账号与 workspace 权限。', justify='left', wraplength=780).pack(anchor='w', pady=10)
         bar = ttk.Frame(page); bar.pack(anchor='w')
         self.button(bar, '打开扩展目录', lambda: self.open_path(self.layout.extension_dir))
         self.button(bar, '复制 Chrome 扩展页地址', lambda: self.copy('chrome://extensions'))
         self.button(bar, '复制 Edge 扩展页地址', lambda: self.copy('edge://extensions'))
+        self.button(bar, '查看完整接入步骤', lambda: self.read_help('new-computer.md'))
         self.code = tk.StringVar(); self.pair_expiry = tk.StringVar(value='配对码有效 5 分钟，限一次使用；配对凭据有效 30 天，失效或丢失时需重新配对。')
         ttk.Entry(page, textvariable=self.code, state='readonly').pack(fill='x', pady=16)
         ttk.Label(page, textvariable=self.pair_expiry).pack(anchor='w')
