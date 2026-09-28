@@ -7,13 +7,13 @@
 [Setup]
 AppId=ChatAgentBridge.Desktop
 AppName=Chat Agent Bridge
-AppVersion=0.2.2
+AppVersion=0.2.3
 DefaultDirName={localappdata}\ChatAgentBridge\app
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
-OutputBaseFilename=ChatAgentBridge-Setup-0.2.2-x64
+OutputBaseFilename=ChatAgentBridge-Setup-0.2.3-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

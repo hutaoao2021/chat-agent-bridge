@@ -1,5 +1,10 @@
 # 预览版验收记录
 
+## 0.2.3 — 2026-09-28 Tunnel 路径修复
+
+- 在发生 Windows 应用数据目录重定向的本机环境中，旧路径启动会立即报配置文件读取错误；修复后使用同一配置启动，Tunnel 能读取云端元数据并成功轮询，管理指标记录 HTTP 200 和 204。
+- Python 107 项回归通过。ChatGPT 对话中的新任务调用、完整关机重启和干净 Windows 安装仍需验收。
+
 ## 0.2.2 — 2026-09-28 ChatGPT App 设置说明
 
 - 对照 OpenAI 的 Secure MCP Tunnel 和 ChatGPT 开发者模式 App 文档，修正浏览器配对与 ChatGPT App 接入之间的说明缺口。

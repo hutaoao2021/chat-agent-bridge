@@ -1,4 +1,8 @@
 from dataclasses import replace
+import ctypes
+import os
+from pathlib import Path
+import tempfile
 import pytest
 from chat_agent_bridge.desktop_settings import Layout, DesktopSettings
 from chat_agent_bridge import supervisor as sp
@@ -15,6 +19,28 @@ def test_configured_proxy_is_passed_as_one_argument(tmp_path):
     layout = Layout.detect(app_dir=tmp_path, data_dir=tmp_path / 'state')
     args = sp.tunnel_argv(layout, DesktopSettings(proxy_url='http://127.0.0.1:7890'))
     assert args[args.index('--control-plane.http-proxy') + 1] == 'http://127.0.0.1:7890'
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows package file virtualization')
+def test_tunnel_uses_physical_profile_dir_when_windows_redirects_local_app_data():
+    import msvcrt
+    with tempfile.TemporaryDirectory(prefix='bridge-profile-', dir=os.environ['LOCALAPPDATA']) as root:
+        profile = Path(root) / 'tunnel-profiles' / 'chat-agent-bridge.yaml'
+        profile.parent.mkdir()
+        profile.write_text('config_version: 1\n', encoding='utf-8')
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        get_path = kernel.GetFinalPathNameByHandleW
+        get_path.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_ulong, ctypes.c_ulong]
+        get_path.restype = ctypes.c_ulong
+        with profile.open('rb') as file:
+            buffer = ctypes.create_unicode_buffer(32768)
+            assert get_path(msvcrt.get_osfhandle(file.fileno()), buffer, len(buffer), 0)
+        physical_dir = str(Path(buffer.value.removeprefix('\\\\?\\')).parent)
+        if physical_dir == str(profile.parent):
+            pytest.skip('Local AppData is not redirected in this process')
+        layout = Layout.detect(data_dir=root)
+        args = sp.tunnel_argv(layout, DesktopSettings())
+        assert args[args.index('--profile-dir') + 1] == physical_dir
 
 
 def test_unknown_healthy_process_is_not_stopped(tmp_path):

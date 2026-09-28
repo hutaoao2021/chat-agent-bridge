@@ -1,6 +1,6 @@
 # 新电脑安装
 
-目标平台为 Windows 10/11 x64；已验证环境和未验收场景见下方验收状态。下载 Release 中的 `ChatAgentBridge-Setup-0.2.2-x64.exe`，双击安装。软件自带完整 Python 和官方 Tunnel 客户端，运行 Bridge 本身无需另装 Python、Node 或手动运行两个终端；项目工具链需按项目要求准备。
+目标平台为 Windows 10/11 x64；已验证环境和未验收场景见下方验收状态。下载 Release 中的 `ChatAgentBridge-Setup-0.2.3-x64.exe`，双击安装。软件自带完整 Python 和官方 Tunnel 客户端，运行 Bridge 本身无需另装 Python、Node 或手动运行两个终端；项目工具链需按项目要求准备。
 
 ## 首次配置
 
@@ -22,4 +22,4 @@ Tunnel 的创建、organization / workspace 关联和 API key 权限，以 [Open
 
 ## 验收状态
 
-0.2.2 为预览版：发布页列出实际安装与运行验证。没有通过干净 Windows 或真实账号验收的部分，不视为已完成验收。项目安装程序尚未代码签名；下载后可按同页 SHA256SUMS 核对文件。
+0.2.3 为预览版：发布页列出实际安装与运行验证。没有通过干净 Windows 或真实账号验收的部分，不视为已完成验收。项目安装程序尚未代码签名；下载后可按同页 SHA256SUMS 核对文件。

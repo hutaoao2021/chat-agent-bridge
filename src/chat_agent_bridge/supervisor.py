@@ -88,10 +88,31 @@ def supervisor_alive(layout):
 
 def tunnel_argv(layout, settings):
     args = [str(layout.tunnel_client), 'run', '--profile', 'chat-agent-bridge', '--profile-dir',
-            str(layout.data_dir / 'tunnel-profiles'), '--health.listen-addr', f'127.0.0.1:{settings.tunnel_port}']
+            str(physical_profile_dir(layout.data_dir / 'tunnel-profiles')), '--health.listen-addr', f'127.0.0.1:{settings.tunnel_port}']
     if settings.proxy_url:
         args.extend(['--control-plane.http-proxy', settings.proxy_url])
     return args
+
+
+def physical_profile_dir(folder):
+    """Give the Go client the real file path when Windows virtualizes Local AppData."""
+    profile = folder / 'chat-agent-bridge.yaml'
+    if os.name != 'nt' or not profile.is_file():
+        return folder
+    import msvcrt
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    get_path = kernel.GetFinalPathNameByHandleW
+    get_path.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_ulong, ctypes.c_ulong]
+    get_path.restype = ctypes.c_ulong
+    with profile.open('rb') as file:
+        handle = msvcrt.get_osfhandle(file.fileno())
+        length = get_path(handle, None, 0, 0)
+        if not length:
+            raise OSError(ctypes.get_last_error(), 'Cannot resolve Tunnel profile path')
+        buffer = ctypes.create_unicode_buffer(length + 1)
+        if not get_path(handle, buffer, len(buffer), 0):
+            raise OSError(ctypes.get_last_error(), 'Cannot resolve Tunnel profile path')
+    return Path(buffer.value.removeprefix('\\\\?\\')).parent
 
 
 def instance_id(data_dir):
